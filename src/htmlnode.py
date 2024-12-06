@@ -27,3 +27,11 @@ class HTMLNode:
             arg.__repr__() for arg in (self.tag, self.value, self.children, self.props)
         )
         return f"HTMLNode({args})"
+
+    def tag_to_html_tags(self):
+        if not self.tag:
+            return "", ""
+
+        open_tag = f"<{self.tag}{self.props_to_html()}>"
+        close_tag = f"</{self.tag}>"
+        return open_tag, close_tag

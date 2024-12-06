@@ -14,6 +14,5 @@ class LeafNode(HTMLNode):
     def to_html(self):
         if not self.tag:
             return self.value
-        open_tag = f"<{self.tag}{self.props_to_html()}>"
-        close_tag = f"</{self.tag}>"
-        return f"{open_tag}{self.value}{close_tag}"
+        open, close = self.tag_to_html_tags()
+        return f"{open}{self.value}{close}"
