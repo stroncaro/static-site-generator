@@ -9,9 +9,12 @@ class TextType(Enum):
     LINK = "link"
     IMAGE = "image"
 
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}.{self.name}"
+
 
 class TextNode:
-    def __init__(self, text: str, text_type: TextType, url: str) -> None:
+    def __init__(self, text: str, text_type: TextType, url: str | None = None) -> None:
         self.text = text
         self.text_type = text_type
         self.url = url
@@ -27,4 +30,9 @@ class TextNode:
             return False
 
     def __repr__(self) -> str:
-        return f"TextNode({self.text.__repr__()}, {self.text_type.__class__.__name__}.{self.text_type.name}, {self.url.__repr__()})"
+        args = ", ".join(
+            arg.__repr__()
+            for arg in (self.text, self.text_type, self.url)
+            if arg is not None
+        )
+        return f"TextNode({args})"
