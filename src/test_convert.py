@@ -1,5 +1,7 @@
 import unittest
 
+from parameterized import parameterized
+
 from textnode import TextNode, TextType
 from convert import text_node_to_html_node, split_node_delimiter
 
@@ -46,50 +48,54 @@ class TestTextNodeToHTMLConversion(unittest.TestCase):
 
 
 class TestTextNodeSplittingFunction(unittest.TestCase):
-    def text_malformed_markdown(self):
-        node = TextNode("*Bold* word", TextType.NORMAL)
-        expected_nodes = [
-            TextNode("Bold", TextType.BOLD),
-            TextNode(" word", TextType.NORMAL),
-        ]
-        nodes = split_node_delimiter([node], "*", TextType.BOLD)
-        self.assertEqual(nodes, expected_nodes)
-
-    def test_delimiter_at_start(self):
+    def test_malformed_markdown(self):
         node = TextNode("Bold* word", TextType.NORMAL)
         self.assertRaises(
             Exception, lambda: split_node_delimiter([node], "*", TextType.BOLD)
         )
 
-    def test_delimiter_in_middle(self):
-        node = TextNode("A *bold* word", TextType.NORMAL)
-        expected_nodes = [
-            TextNode("A ", TextType.NORMAL),
-            TextNode("bold", TextType.BOLD),
-            TextNode(" word", TextType.NORMAL),
-        ]
-        nodes = split_node_delimiter([node], "*", TextType.BOLD)
-        self.assertEqual(nodes, expected_nodes)
-
-    def test_delimiter_at_end(self):
-        node = TextNode("Bold *word*", TextType.NORMAL)
-        expected_nodes = [
-            TextNode("Bold ", TextType.NORMAL),
-            TextNode("word", TextType.BOLD),
-        ]
-        nodes = split_node_delimiter([node], "*", TextType.BOLD)
-        self.assertEqual(nodes, expected_nodes)
-
-    def test_many_delimiters(self):
-        node = TextNode("This *has* bold *words*", TextType.NORMAL)
-        expected_nodes = [
-            TextNode("This ", TextType.NORMAL),
-            TextNode("has", TextType.BOLD),
-            TextNode(" bold ", TextType.NORMAL),
-            TextNode("words", TextType.BOLD),
-        ]
-        nodes = split_node_delimiter([node], "*", TextType.BOLD)
-        self.assertEqual(nodes, expected_nodes)
+    @parameterized.expand(
+        (
+            (
+                "start",
+                TextNode("*Bold* word", TextType.NORMAL),
+                [
+                    TextNode("Bold", TextType.BOLD),
+                    TextNode(" word", TextType.NORMAL),
+                ],
+            ),
+            (
+                "middle",
+                TextNode("A *bold* word", TextType.NORMAL),
+                [
+                    TextNode("A ", TextType.NORMAL),
+                    TextNode("bold", TextType.BOLD),
+                    TextNode(" word", TextType.NORMAL),
+                ],
+            ),
+            (
+                "end",
+                TextNode("Bold *word*", TextType.NORMAL),
+                [
+                    TextNode("Bold ", TextType.NORMAL),
+                    TextNode("word", TextType.BOLD),
+                ],
+            ),
+            (
+                "many",
+                TextNode("This *has* bold *words*", TextType.NORMAL),
+                [
+                    TextNode("This ", TextType.NORMAL),
+                    TextNode("has", TextType.BOLD),
+                    TextNode(" bold ", TextType.NORMAL),
+                    TextNode("words", TextType.BOLD),
+                ],
+            ),
+        )
+    )
+    def test_delimiter_position(self, name, input, output):
+        result = split_node_delimiter([input], "*", TextType.BOLD)
+        self.assertEqual(result, output)
 
     def test_complex_case(self):
         nodes = [
