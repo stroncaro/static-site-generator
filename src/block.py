@@ -24,7 +24,7 @@ class BlockType(Enum):
     HEADING5 = "h5"
     HEADING6 = "h6"
     CODE = "code"
-    QUOTE = "quote"
+    QUOTE = "blockquote"
     UNORDERED_LIST = "ul"
     ORDERED_LIST = "ol"
     LIST_ITEM = "li"
@@ -70,7 +70,11 @@ def markdown_to_html_nodes(markdown: str) -> HTMLNode:
     for block in blocks:
         block_type = block_to_block_type(block)
         children = get_children(block, block_type)
-        block_nodes.append(ParentNode(block_type.value, children))
+        new_node = ParentNode(block_type.value, children)
+        if block_type == BlockType.CODE:
+            new_node = ParentNode("pre", [new_node])
+        block_nodes.append(new_node)
+
     root_node = ParentNode("div", block_nodes)
     return root_node
 

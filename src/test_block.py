@@ -153,12 +153,12 @@ name = input("Enter your name: ")
 print("Hello " + name + "!")
 ```
 """,
-                '<div><code>name = input("Enter your name: ")\nprint("Hello " + name + "!")</code></div>',
+                '<div><pre><code>name = input("Enter your name: ")\nprint("Hello " + name + "!")</code></pre></div>',
             ),
             (
                 "quote block",
                 "> Super interesting\n> quote I found",
-                "<div><quote>Super interesting quote I found</quote></div>",
+                "<div><blockquote>Super interesting quote I found</blockquote></div>",
             ),
             (
                 "ordered list",
