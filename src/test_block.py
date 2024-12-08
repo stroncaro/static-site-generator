@@ -6,7 +6,7 @@ from block import (
     BlockType,
     markdown_to_blocks,
     block_to_block_type,
-    markdown_to_html_nodes,
+    markdown_to_html_node,
 )
 
 
@@ -175,8 +175,38 @@ print("Hello " + name + "!")
                 "* find **shelter**\n* start a *fire*\n* don't **die**",
                 "<div><ul><li>find <b>shelter</b></li><li>start a <i>fire</i></li><li>don't <b>die</b></li></ul></div>",
             ),
+            # (
+            #     "empty document",
+            #     "   \n  \n  ",
+            #     "<div></div>",
+            # ),
+            (
+                "mixed content blocks",
+                """
+This is a paragraph.
+
+* First item
+* Second item
+
+> Here's a quote
+""",
+                "<div><p>This is a paragraph.</p><ul><li>First item</li><li>Second item</li></ul><blockquote>Here's a quote</blockquote></div>",
+            ),
+            #             (
+            #                 "list with multiline items",
+            #                 """* First line
+            # of first item
+            # * Second item
+            # spans two lines""",
+            #                 "<div><ul><li>First line of first item</li><li>Second item spans two lines</li></ul></div>",
+            #             ),
+            (
+                "malformed heading becomes paragraph",
+                "#Not a heading",
+                "<div><p>#Not a heading</p></div>",
+            ),
         )
     )
     def test_markdown_to_html_with_(self, name, markdown, expected_html):
-        html_node = markdown_to_html_nodes(markdown)
+        html_node = markdown_to_html_node(markdown)
         self.assertEqual(html_node.to_html(), expected_html)

@@ -64,7 +64,7 @@ def block_to_block_type(block: str) -> BlockType:
     return BlockType.PARAGRAPH
 
 
-def markdown_to_html_nodes(markdown: str) -> HTMLNode:
+def markdown_to_html_node(markdown: str) -> HTMLNode:
     blocks = markdown_to_blocks(markdown)
     block_nodes = []
     for block in blocks:
