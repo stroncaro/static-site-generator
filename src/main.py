@@ -1,5 +1,8 @@
 from textnode import TextNode, TextType
 
+import unittest
+from test_block import TestMarkdownToHTMLNodes
+
 
 def main():
     tn1 = TextNode("This is a text node", TextType.BOLD, "https://boot.dev")
@@ -14,3 +17,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    unittest.main()
