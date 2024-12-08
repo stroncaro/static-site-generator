@@ -1,5 +1,5 @@
-import itertools
-from typing import List
+import re
+from typing import List, Tuple, Callable
 
 from leafnode import LeafNode
 from textnode import TextNode, TextType
@@ -50,3 +50,91 @@ def split_node_delimiter(
         nodes = chunk_to_nodes(chunks, node.text_type, text_type)
         new_nodes.extend(nodes)
     return new_nodes
+
+
+MD_IMAGE_REGEX = r"!\[(.*?)\]\((.+?)\)"
+MD_LINK_REGEX = r"(?<!!)\[(.+?)\]\((.+?)\)"
+
+
+# TODO: consolidate the extract_ methods to avoid doing the match twice
+def extract_markdown_images(text: str) -> List[Tuple[str, str]]:
+    return re.findall(MD_IMAGE_REGEX, text)
+
+
+def extract_markdown_indeces_images(text: str) -> List[Tuple[int, int]]:
+    return (
+        (match.start(1) - 2, match.end(2) + 1)
+        for match in re.finditer(MD_IMAGE_REGEX, text)
+    )
+
+
+def extract_markdown_links(text: str) -> List[Tuple[str, str]]:
+    return re.findall(MD_LINK_REGEX, text)
+
+
+def extract_markdown_indeces_links(text: str) -> List[Tuple[int, int]]:
+    return (
+        (match.start(1) - 1, match.end(2) + 1)
+        for match in re.finditer(MD_LINK_REGEX, text)
+    )
+
+
+def split_nodes(
+    old_nodes: List[TextNode],
+    extractor: Callable[[str], List[Tuple[str, str | None]]],
+    text_type: TextType,
+) -> List[TextNode]:
+    new_nodes = []
+    for node in old_nodes:
+        chunks = extractor(node.text)
+        processed = split_nodes_processor(chunks, node.text_type, text_type)
+        new_nodes.extend(processed)
+    return new_nodes
+
+
+def split_nodes_processor(
+    chunks: List[Tuple[str, str | None]], even_type: TextType, odd_type: TextType
+) -> List[TextNode]:
+    types = (even_type, odd_type)
+    return [
+        TextNode(chunk[0], types[i % 2], chunk[1])
+        for i, chunk in enumerate(chunks)
+        if chunk[0] or chunk[1]
+    ]
+
+
+def extractor(
+    tuple_extractor: Callable[[str], List[Tuple[str, str]]],
+    index_extractor: Callable[[str], List[Tuple[int, int]]],
+):
+    def decorated(_):
+        def inner(text: str) -> List[Tuple[str, str | None]]:
+            chunks = []
+            tuples = tuple_extractor(text)
+            indeces = index_extractor(text)
+            for (extracted_text, extracted_url), (start, end) in zip(tuples, indeces):
+                chunks.append((text[:start], None))
+                chunks.append((extracted_text, extracted_url))
+                text = text[end:]
+            chunks.append((text, None))
+            return chunks
+
+        return inner
+
+    return decorated
+
+
+@extractor(extract_markdown_images, extract_markdown_indeces_images)
+def extractor_images(text: str) -> List[Tuple[str, str | None]]: ...
+
+
+@extractor(extract_markdown_links, extract_markdown_indeces_links)
+def extractor_links(text: str) -> List[Tuple[str, str | None]]: ...
+
+
+def split_nodes_images(old_nodes: List[TextNode]) -> List[TextNode]:
+    return split_nodes(old_nodes, extractor_images, TextType.IMAGE)
+
+
+def split_nodes_links(old_nodes: List[TextNode]) -> List[TextNode]:
+    return split_nodes(old_nodes, extractor_links, TextType.LINK)

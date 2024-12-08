@@ -3,7 +3,14 @@ import unittest
 from parameterized import parameterized
 
 from textnode import TextNode, TextType
-from convert import text_node_to_html_node, split_node_delimiter
+from convert import (
+    text_node_to_html_node,
+    split_node_delimiter,
+    extract_markdown_images,
+    extract_markdown_links,
+    split_nodes_images,
+    split_nodes_links,
+)
 
 
 class TestTextNodeToHTMLConversion(unittest.TestCase):
@@ -125,3 +132,189 @@ class TestTextNodeSplittingFunction(unittest.TestCase):
         result = split_node_delimiter(result, "*", TextType.ITALIC)
         result = split_node_delimiter(result, "`", TextType.CODE)
         self.assertEqual(result, expected_nodes)
+
+
+class TestMarkdownImageExtraction(unittest.TestCase):
+    @parameterized.expand(
+        (
+            (
+                "one image",
+                "This is text with a ![rick roll](https://i.imgur.com/aKaOqIh.gif)",
+                [
+                    ("rick roll", "https://i.imgur.com/aKaOqIh.gif"),
+                ],
+            ),
+            (
+                "two images",
+                "This is text with a ![rick roll](https://i.imgur.com/aKaOqIh.gif) and ![obi wan](https://i.imgur.com/fJRm4Vk.jpeg)",
+                [
+                    ("rick roll", "https://i.imgur.com/aKaOqIh.gif"),
+                    ("obi wan", "https://i.imgur.com/fJRm4Vk.jpeg"),
+                ],
+            ),
+            (
+                "no alt text",
+                "This is an image with no alt text ![](https://i.imgur.com/aKaOqIh.gif)",
+                [
+                    ("", "https://i.imgur.com/aKaOqIh.gif"),
+                ],
+            ),
+        )
+    )
+    def test_image_extraction(self, name, input, expected_output):
+        output = extract_markdown_images(input)
+        self.assertEqual(output, expected_output)
+
+
+class TestMarkdownLinkExtraction(unittest.TestCase):
+    @parameterized.expand(
+        (
+            (
+                "one link",
+                "This is text with a link [to boot dev](https://www.boot.dev)",
+                [
+                    ("to boot dev", "https://www.boot.dev"),
+                ],
+            ),
+            (
+                "two links",
+                "This is text with a link [to boot dev](https://www.boot.dev) and [to youtube](https://www.youtube.com/)",
+                [
+                    ("to boot dev", "https://www.boot.dev"),
+                    ("to youtube", "https://www.youtube.com/"),
+                ],
+            ),
+            (
+                "image and link",
+                "This is text with a ![rick roll](https://i.imgur.com/aKaOqIh.gif) and a link [to youtube](https://www.youtube.com/)",
+                [
+                    ("to youtube", "https://www.youtube.com/"),
+                ],
+            ),
+        )
+    )
+    def test_image_extraction(self, name, input, expected_output):
+        output = extract_markdown_links(input)
+        self.assertEqual(output, expected_output)
+
+
+class TestSplitNodesImage(unittest.TestCase):
+    @parameterized.expand(
+        (
+            (
+                "single node with one image in middle",
+                [
+                    TextNode(
+                        "This is text with a ![rick roll](https://i.imgur.com/aKaOqIh.gif) and a link [to youtube](https://www.youtube.com/)",
+                        TextType.NORMAL,
+                    )
+                ],
+                [
+                    TextNode("This is text with a ", TextType.NORMAL),
+                    TextNode(
+                        "rick roll", TextType.IMAGE, "https://i.imgur.com/aKaOqIh.gif"
+                    ),
+                    TextNode(
+                        " and a link [to youtube](https://www.youtube.com/)",
+                        TextType.NORMAL,
+                    ),
+                ],
+            ),
+            (
+                "single node with one image at start",
+                [
+                    TextNode(
+                        "![rick roll](https://i.imgur.com/aKaOqIh.gif) is a meme",
+                        TextType.NORMAL,
+                    )
+                ],
+                [
+                    TextNode(
+                        "rick roll", TextType.IMAGE, "https://i.imgur.com/aKaOqIh.gif"
+                    ),
+                    TextNode(" is a meme", TextType.NORMAL),
+                ],
+            ),
+            (
+                "single node with one image at end",
+                [
+                    TextNode(
+                        "Get Rick Rolled!![rick roll](https://i.imgur.com/aKaOqIh.gif)",
+                        TextType.NORMAL,
+                    )
+                ],
+                [
+                    TextNode("Get Rick Rolled!", TextType.NORMAL),
+                    TextNode(
+                        "rick roll", TextType.IMAGE, "https://i.imgur.com/aKaOqIh.gif"
+                    ),
+                ],
+            ),
+        )
+    )
+    def test_splits_images_from_(self, name, input, expected_output):
+        output = split_nodes_images(input)
+        self.assertEqual(output, expected_output)
+
+
+class TestSplitNodesLinks(unittest.TestCase):
+    @parameterized.expand(
+        (
+            (
+                "single node with link at end",
+                [
+                    TextNode(
+                        "This is text with a link [to youtube](https://www.youtube.com/)",
+                        TextType.NORMAL,
+                    )
+                ],
+                [
+                    TextNode("This is text with a link ", TextType.NORMAL),
+                    TextNode("to youtube", TextType.LINK, "https://www.youtube.com/"),
+                ],
+            ),
+            (
+                "single node with link in middle",
+                [
+                    TextNode(
+                        "Go [to youtube](https://www.youtube.com/) to watch some videos",
+                        TextType.NORMAL,
+                    )
+                ],
+                [
+                    TextNode("Go ", TextType.NORMAL),
+                    TextNode("to youtube", TextType.LINK, "https://www.youtube.com/"),
+                    TextNode(" to watch some videos", TextType.NORMAL),
+                ],
+            ),
+            (
+                "single node with link at start",
+                [
+                    TextNode(
+                        "[Youtube](https://www.youtube.com/) to watch some videos",
+                        TextType.NORMAL,
+                    )
+                ],
+                [
+                    TextNode("Youtube", TextType.LINK, "https://www.youtube.com/"),
+                    TextNode(" to watch some videos", TextType.NORMAL),
+                ],
+            ),
+            (
+                "tricky case where text repeats",
+                [
+                    TextNode(
+                        "Have you gone to Youtube? [Youtube](https://www.youtube.com/)",
+                        TextType.NORMAL,
+                    )
+                ],
+                [
+                    TextNode("Have you gone to Youtube? ", TextType.NORMAL),
+                    TextNode("Youtube", TextType.LINK, "https://www.youtube.com/"),
+                ],
+            ),
+        )
+    )
+    def test_splits_images_from_(self, name, input, expected_output):
+        output = split_nodes_links(input)
+        self.assertEqual(output, expected_output)
