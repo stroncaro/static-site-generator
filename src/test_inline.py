@@ -3,13 +3,14 @@ import unittest
 from parameterized import parameterized
 
 from textnode import TextNode, TextType
-from convert import (
+from inline import (
     text_node_to_html_node,
     split_node_delimiter,
     extract_markdown_images,
     extract_markdown_links,
     split_nodes_images,
     split_nodes_links,
+    text_to_text_nodes,
 )
 
 
@@ -317,4 +318,35 @@ class TestSplitNodesLinks(unittest.TestCase):
     )
     def test_splits_images_from_(self, name, input, expected_output):
         output = split_nodes_links(input)
+        self.assertEqual(output, expected_output)
+
+
+class TestTextToTextNode(unittest.TestCase):
+
+    @parameterized.expand(
+        (
+            (
+                "complex_case",
+                "This is **text** with an *italic* word and a `code block` and an ![obi wan image](https://i.imgur.com/fJRm4Vk.jpeg) and a [link](https://www.youtube.com/)",
+                [
+                    TextNode("This is ", TextType.NORMAL),
+                    TextNode("text", TextType.BOLD),
+                    TextNode(" with an ", TextType.NORMAL),
+                    TextNode("italic", TextType.ITALIC),
+                    TextNode(" word and a ", TextType.NORMAL),
+                    TextNode("code block", TextType.CODE),
+                    TextNode(" and an ", TextType.NORMAL),
+                    TextNode(
+                        "obi wan image",
+                        TextType.IMAGE,
+                        "https://i.imgur.com/fJRm4Vk.jpeg",
+                    ),
+                    TextNode(" and a ", TextType.NORMAL),
+                    TextNode("link", TextType.LINK, "https://www.youtube.com/"),
+                ],
+            ),
+        )
+    )
+    def test_text(self, name, input, expected_output):
+        output = text_to_text_nodes(input)
         self.assertEqual(output, expected_output)

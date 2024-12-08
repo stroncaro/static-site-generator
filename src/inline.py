@@ -23,6 +23,16 @@ def text_node_to_html_node(text_node: TextNode) -> LeafNode:
             raise Exception("Unknown text node type")
 
 
+def text_to_text_nodes(text: str) -> List[TextNode]:
+    nodes = [TextNode(text, TextType.NORMAL)]
+    nodes = split_nodes_images(nodes)
+    nodes = split_nodes_links(nodes)
+    nodes = split_node_delimiter(nodes, "**", TextType.BOLD)
+    nodes = split_node_delimiter(nodes, "*", TextType.ITALIC)
+    nodes = split_node_delimiter(nodes, "`", TextType.CODE)
+    return nodes
+
+
 MD_IMAGE_REGEX = r"!\[(.*?)\]\((.+?)\)"
 MD_LINK_REGEX = r"(?<!!)\[(.+?)\]\((.+?)\)"
 
@@ -57,7 +67,7 @@ def split_nodes(
 ) -> List[TextNode]:
     new_nodes = []
     for node in old_nodes:
-        chunks = extractor(node.text)
+        chunks = extractor(node.text, node.url)
         processed = split_nodes_processor(chunks, node.text_type, text_type)
         new_nodes.extend(processed)
     return new_nodes
@@ -74,41 +84,43 @@ def split_nodes_processor(
     ]
 
 
-def extractor(
+def extractor_function(
     tuple_extractor: Callable[[str], List[Tuple[str, str]]],
     index_extractor: Callable[[str], List[Tuple[int, int]]],
 ):
-    def decorated(_):
-        def inner(text: str) -> List[Tuple[str, str | None]]:
+    def decorator(_):
+        def inner(text: str, url: str) -> List[Tuple[str, str | None]]:
             chunks = []
             tuples = tuple_extractor(text)
             indeces = index_extractor(text)
             for (extracted_text, extracted_url), (start, end) in zip(tuples, indeces):
-                chunks.append((text[:start], None))
+                chunks.append((text[:start], url))
                 chunks.append((extracted_text, extracted_url))
                 text = text[end:]
-            chunks.append((text, None))
+            chunks.append((text, url))
             return chunks
 
         return inner
 
-    return decorated
+    return decorator
 
 
-@extractor(extract_markdown_images, extract_markdown_indeces_images)
-def extractor_images(text: str) -> List[Tuple[str, str | None]]: ...
+@extractor_function(extract_markdown_images, extract_markdown_indeces_images)
+def extractor_images(text: str, url: str) -> List[Tuple[str, str | None]]: ...
 
 
-@extractor(extract_markdown_links, extract_markdown_indeces_links)
-def extractor_links(text: str) -> List[Tuple[str, str | None]]: ...
+@extractor_function(extract_markdown_links, extract_markdown_indeces_links)
+def extractor_links(text: str, url: str) -> List[Tuple[str, str | None]]: ...
 
 
 def extractor_delimiter_factory(delimiter: str):
-    def extractor_delimiter(text: str) -> List[Tuple[str, None]]:
+    def extractor_delimiter(text: str, url: str) -> List[Tuple[str, str | None]]:
         split_text = text.split(delimiter)
         if len(split_text) % 2 == 0:
             raise Exception(f"Malformed markdown text: {text}")
-        return [(text_chunk, None) for text_chunk in split_text]
+        return [
+            (text_chunk, (url, None)[i % 2]) for i, text_chunk in enumerate(split_text)
+        ]
 
     return extractor_delimiter
 
