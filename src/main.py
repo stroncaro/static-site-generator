@@ -2,17 +2,17 @@ import os
 from pathlib import Path
 import shutil
 
-from document import generate_page
+from document import generate_pages_recursively
 
 
 def main():
     # Assumes file is '.../src/main.py' and gets to base directory '.../'
     root = Path(__file__).parent.parent
     recursive_copy(root / "static", root / "public")
-    generate_page(
-        root / "content" / "index.md",
+    generate_pages_recursively(
+        root / "content",
         root / "template.html",
-        root / "public" / "index.html",
+        root / "public",
     )
 
 
